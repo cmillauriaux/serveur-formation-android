@@ -12,26 +12,40 @@ var db *gorm.DB
 
 func open() {
 	var err error
-	db, err = gorm.Open("sqlite3", "wish.db")
+	db, err = gorm.Open("sqlite3", "reservation.db")
 	if err != nil {
 		panic("failed to connect database")
 	}
-	db.AutoMigrate(&Wish{})
+	db.AutoMigrate(&Agence{})
 	db.AutoMigrate(&User{})
+	db.AutoMigrate(&Reservation{})
+	db.AutoMigrate(&Vehicule{})
 }
 
-func newUserFromDB(user *User) (string, error) {
+func newUserFromDB(user *User) (string, string, error) {
 	if getUserByMailFromDB(user.Mail) != nil {
-		return "", errors.New("Le compte existe déjà")
+		return "", "", errors.New("Le compte existe déjà")
 	}
 	user.UserID = uuid.NewV4().String()
+	user.AgenceID = uuid.NewV4().String()
 	db.Create(user)
-	return user.UserID, nil
+
+	agence := Agence{AgenceID: user.AgenceID}
+	db.Create(agence)
+
+	return user.UserID, user.AgenceID, nil
+}
+
+func newVehiculeFromDB(vehicule *Vehicule) error {
+	vehicule.VehiculeID = uuid.NewV4().String()
+	db.Create(vehicule)
+
+	return nil
 }
 
 func getUserFromDB(userID string) *User {
 	user := User{}
-	db.First(&user, userID)
+	db.Where(&User{UserID: userID}).First(&user)
 	if user.UserID == "" {
 		return nil
 	}
@@ -56,49 +70,68 @@ func getUserByMailAndPasswordFromDB(mail string, password string) *User {
 	return &user
 }
 
-func listWishesFromDB(userID string) []Wish {
-	whishes := make([]Wish, 0)
-	db.Where(&Wish{UserID: userID}).Find(&whishes)
-	return whishes
+func listReservationsFromDB(agenceID string) []Reservation {
+	reservations := make([]Reservation, 0)
+	db.Where(&Reservation{AgenceID: agenceID}).Find(&reservations)
+	return reservations
 }
 
-func newWishFromDB(userID string, wish *Wish) (*Wish, error) {
-	if getUserByMailFromDB(userID) != nil {
+func listVehiculesFromDB() []Vehicule {
+	vehicules := make([]Vehicule, 0)
+	db.Find(&vehicules)
+	return vehicules
+}
+
+func newReservationFromDB(userID string, reservation *Reservation) (*Reservation, error) {
+	user := getUserFromDB(userID)
+	if user == nil {
 		return nil, errors.New("L'utilisateur n'existe pas")
 	}
-	wish.UserID = userID
-	wish.WishID = uuid.NewV4().String()
-	db.Create(wish)
-	return wish, nil
+	vehicule := getVehiculeByID(reservation.VehiculeID)
+	if vehicule == nil {
+		return nil, errors.New("Le véhicule n'existe pas")
+	}
+	if !vehicule.IsDisponible {
+		return nil, errors.New("Le véhicule n'est pas disponible")
+	}
+	reservation.AgenceID = user.AgenceID
+	reservation.ReservationID = uuid.NewV4().String()
+	reservation.IsEncours = true
+	db.Create(reservation)
+
+	vehicule.IsDisponible = false
+	db.Save(vehicule)
+
+	return reservation, nil
 }
 
-func getWishesByUserAndID(userID string, wishID string) *Wish {
-	wish := Wish{}
-	db.Where(&Wish{UserID: userID, WishID: wishID}).First(&wish)
-	if wish.WishID == "" {
+func getVehiculeByID(vehiculeID string) *Vehicule {
+	vehicule := Vehicule{}
+	db.Where(&Vehicule{VehiculeID: vehiculeID}).First(&vehicule)
+	if vehicule.VehiculeID == "" {
 		return nil
 	}
-	return &wish
+	return &vehicule
 }
 
-func updateWishFromDB(userID string, wishID string, wish *Wish) error {
-	wishDb := getWishesByUserAndID(userID, wishID)
-	if wishDb == nil {
-		return errors.New("Le souhait n'existe pas")
+func getReservationByAgenceAndID(agenceID string, reservationID string) *Reservation {
+	reservation := Reservation{}
+	db.Where(&Reservation{AgenceID: agenceID, ReservationID: reservationID}).First(&reservation)
+	if reservation.ReservationID == "" {
+		return nil
 	}
-	wishDb.Title = wish.Title
-	wishDb.Description = wish.Description
-	wishDb.Link = wish.Link
-	wishDb.Price = wish.Price
-	db.Save(wishDb)
-	return nil
+	return &reservation
 }
 
-func deleteWishFromDB(userID string, wishID string) error {
-	wishDb := getWishesByUserAndID(userID, wishID)
-	if wishDb == nil {
-		return errors.New("Le souhait n'existe pas")
+func updateReservationFromDB(agenceID string, reservationID string, reservation *Reservation) error {
+	reservationDb := getReservationByAgenceAndID(agenceID, reservationID)
+	if reservationDb == nil {
+		return errors.New("La réservation n'existe pas")
 	}
-	db.Delete(wishDb)
+	reservationDb.DateDebut = reservation.DateDebut
+	reservationDb.DateFin = reservation.DateFin
+	reservationDb.IsEncours = reservation.IsEncours
+	reservationDb.TarifJournalier = reservation.TarifJournalier
+	db.Save(reservationDb)
 	return nil
 }
