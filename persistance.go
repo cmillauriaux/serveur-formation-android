@@ -26,8 +26,12 @@ func newUserFromDB(user *User) (string, string, error) {
 	if getUserByMailFromDB(user.Mail) != nil {
 		return "", "", errors.New("Le compte existe déjà")
 	}
-	user.UserID = uuid.NewV4().String()
-	user.AgenceID = uuid.NewV4().String()
+
+	id, _ := uuid.NewV4()
+
+	user.UserID = id.String()
+	id, _ = uuid.NewV4()
+	user.AgenceID = id.String()
 	db.Create(user)
 
 	agence := Agence{AgenceID: user.AgenceID}
@@ -37,7 +41,8 @@ func newUserFromDB(user *User) (string, string, error) {
 }
 
 func newVehiculeFromDB(vehicule *Vehicule) error {
-	vehicule.VehiculeID = uuid.NewV4().String()
+	id, _ := uuid.NewV4()
+	vehicule.VehiculeID = id.String()
 	db.Create(vehicule)
 
 	return nil
@@ -95,7 +100,8 @@ func newReservationFromDB(userID string, reservation *Reservation) (*Reservation
 		return nil, errors.New("Le véhicule n'est pas disponible")
 	}
 	reservation.AgenceID = user.AgenceID
-	reservation.ReservationID = uuid.NewV4().String()
+	id, _ := uuid.NewV4()
+	reservation.ReservationID = id.String()
 	reservation.IsEncours = true
 	db.Create(reservation)
 
@@ -124,7 +130,8 @@ func newRetourFromDB(agenceID string, reservationID string, retour *Retour) (*Re
 		return nil, errors.New("Le véhicule n'existe pas")
 	}
 
-	retour.RetourID = uuid.NewV4().String()
+	id, _ := uuid.NewV4()
+	retour.RetourID = id.String()
 	retour.ReservationID = reservationID
 	reservation.IsEncours = true
 	db.Create(retour)
