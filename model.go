@@ -19,6 +19,15 @@ type Reservation struct {
 	IsEncours       bool    `form:"isEnCours" json:"isEnCours"`
 }
 
+type Retour struct {
+	RetourID        string `form:"retourID" json:"retourID" gorm:"primary_key"`
+	ReservationID   string `form:"reservationID" json:"reservationID" binding:"required"`
+	IsEndommage     bool   `form:"isEndommage" json:"isEndommage"`
+	IsPleinEffectue bool   `form:"isPleinEffectue" json:"isPleinEffectue"`
+	NbKmEffectues   int    `form:"nbKmEffectues" json:"nbKmEffectues" binding:"required"`
+	Photo           string `form:"photo" json:"photo" binding:"required"`
+}
+
 type Vehicule struct {
 	VehiculeID   string  `form:"vehiculeID" json:"vehiculeID" gorm:"primary_key"`
 	NbPlaces     int     `form:"nbPlaces" json:"nbPlaces" binding:"required"`

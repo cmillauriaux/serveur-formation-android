@@ -20,14 +20,17 @@ func main() {
 	router.POST("/connect", connectUser)
 	router.GET("/vehicules", listeVehicules)
 	router.POST("/vehicules/random", createRandomVehicules)
+	router.GET("/vehicules/:vehiculeID", detailsVehicule)
 	router.GET("/reservations/:agenceID", listeReservations)
 	router.GET("/reservations/:agenceID/:reservationID", detailsReservation)
 	router.POST("/reservations/:userID", newReservation)
+	router.GET("agences/:agenceID", detailsAgence)
+	router.PUT("agences/:agenceID/:userID", updateAgence)
 	//router.PUT("/reservations/:agenceID/:reservationID", updateReservation)
-	//router.POST("/reservations/:agenceID/:reservationID/retour", newRetour)
+	router.POST("/retours/:agenceID/:reservationID", newRetour)
 
 	// Launch server
-	router.Run(":8080")
+	router.Run(":80")
 }
 
 func newUser(c *gin.Context) {
@@ -98,7 +101,20 @@ func listeVehicules(c *gin.Context) {
 func detailsReservation(c *gin.Context) {
 	agenceID := c.Param("agenceID")
 	reservationID := c.Param("reservationID")
+	// TODO : Vérifier l'existence de la réservation
 	c.JSON(200, gin.H{"reservation": getReservationByAgenceAndID(agenceID, reservationID)})
+}
+
+func detailsVehicule(c *gin.Context) {
+	vehiculeID := c.Param("vehiculeID")
+	// TODO : Vérifier l'existence du véhicule
+	c.JSON(200, gin.H{"vehicule": getVehiculeByID(vehiculeID)})
+}
+
+func detailsAgence(c *gin.Context) {
+	agenceID := c.Param("agenceID")
+	// TODO : Vérifier l'existence du véhicule
+	c.JSON(200, gin.H{"agence": getAgenceByID(agenceID)})
 }
 
 func newReservation(c *gin.Context) {
@@ -116,16 +132,32 @@ func newReservation(c *gin.Context) {
 	}
 }
 
-func update(c *gin.Context) {
-	userID := c.Param("userID")
+func newRetour(c *gin.Context) {
+	agenceID := c.Param("agenceID")
 	reservationID := c.Param("reservationID")
-	var json Reservation
+	var json Retour
 	if err := c.ShouldBindJSON(&json); err == nil {
-		err := updateReservationFromDB(userID, reservationID, &json)
+		retour, err := newRetourFromDB(agenceID, reservationID, &json)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		} else {
+			c.JSON(http.StatusOK, gin.H{"retour": retour})
+		}
+	} else {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	}
+}
+
+func updateAgence(c *gin.Context) {
+	userID := c.Param("userID")
+	agenceID := c.Param("agenceID")
+	var json Agence
+	if err := c.ShouldBindJSON(&json); err == nil {
+		err := updateAgenceFromDB(userID, agenceID, &json)
 		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err})
 		} else {
-			c.Status(200)
+			c.JSON(http.StatusOK, gin.H{"result": "OK"})
 		}
 	} else {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})

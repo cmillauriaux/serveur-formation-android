@@ -105,6 +105,39 @@ func newReservationFromDB(userID string, reservation *Reservation) (*Reservation
 	return reservation, nil
 }
 
+func newRetourFromDB(agenceID string, reservationID string, retour *Retour) (*Retour, error) {
+	agence := getAgenceByID(agenceID)
+	if agence == nil {
+		return nil, errors.New("L'agence n'existe pas")
+	}
+	reservation := getReservationByAgenceAndID(agenceID, reservationID)
+	if reservation == nil {
+		return nil, errors.New("La réservation n'existe pas ou ne correspond pas à la bonne agence")
+	}
+
+	if !reservation.IsEncours {
+		return nil, errors.New("La réservation est déjà terminée")
+	}
+
+	vehicule := getVehiculeByID(reservation.VehiculeID)
+	if vehicule == nil {
+		return nil, errors.New("Le véhicule n'existe pas")
+	}
+
+	retour.RetourID = uuid.NewV4().String()
+	retour.ReservationID = reservationID
+	reservation.IsEncours = true
+	db.Create(retour)
+
+	reservation.IsEncours = false
+	db.Save(reservation)
+
+	vehicule.IsDisponible = true
+	db.Save(vehicule)
+
+	return retour, nil
+}
+
 func getVehiculeByID(vehiculeID string) *Vehicule {
 	vehicule := Vehicule{}
 	db.Where(&Vehicule{VehiculeID: vehiculeID}).First(&vehicule)
@@ -112,6 +145,15 @@ func getVehiculeByID(vehiculeID string) *Vehicule {
 		return nil
 	}
 	return &vehicule
+}
+
+func getAgenceByID(agenceID string) *Agence {
+	agence := Agence{}
+	db.Where(&Agence{AgenceID: agenceID}).First(&agence)
+	if agence.AgenceID == "" {
+		return nil
+	}
+	return &agence
 }
 
 func getReservationByAgenceAndID(agenceID string, reservationID string) *Reservation {
@@ -133,5 +175,29 @@ func updateReservationFromDB(agenceID string, reservationID string, reservation 
 	reservationDb.IsEncours = reservation.IsEncours
 	reservationDb.TarifJournalier = reservation.TarifJournalier
 	db.Save(reservationDb)
+	return nil
+}
+
+func updateAgenceFromDB(userID string, agenceID string, agence *Agence) error {
+	user := getUserFromDB(userID)
+	if user == nil {
+		return errors.New("L'utilisateur n'existe pas")
+	}
+
+	agenceDb := getAgenceByID(agenceID)
+	if agenceDb == nil {
+		return errors.New("L'agence n'existe pas")
+	}
+
+	if user.AgenceID != agenceDb.AgenceID {
+		return errors.New("L'utilisateur n'appartient pas à l'agence")
+	}
+
+	agenceDb.CodePostal = agence.CodePostal
+	agenceDb.RaisonSociale = agence.RaisonSociale
+	agenceDb.SIRET = agence.SIRET
+	agenceDb.Ville = agence.Ville
+	agenceDb.Voie = agence.Voie
+	db.Save(agenceDb)
 	return nil
 }
