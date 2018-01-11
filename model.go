@@ -37,6 +37,7 @@ type Vehicule struct {
 	TarifMax     float32 `form:"tarifMax" json:"tarifMax" binding:"required"`
 	TarifMoyen   float32 `form:"tarifMoyen" json:"tarifMoyen" binding:"required"`
 	IsDisponible bool    `form:"isDisponible" json:"isDisponible" binding:"required"`
+	Libelle      string  `form:"libelle" json:"libelle"`
 }
 
 type User struct {

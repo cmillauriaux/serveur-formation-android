@@ -3,6 +3,7 @@ package main
 import (
 	"math/rand"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -78,6 +79,7 @@ func createRandomVehicules(c *gin.Context) {
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 	for i := 0; i < 10; i++ {
 		vehicule := Vehicule{
+			Libelle:      "Vehicule n°" + strconv.FormatInt(int64(r.Intn(1000)), 10),
 			NbPlaces:     r.Intn(6) + 1,
 			IsDisponible: true,
 			LocationMin:  r.Intn(2) + 1,
